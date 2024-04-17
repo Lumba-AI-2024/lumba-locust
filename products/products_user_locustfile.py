@@ -2,7 +2,7 @@ import random
 from locust import HttpUser, constant, task, SequentialTaskSet
 from uuid import uuid4
 
-from config import AUTH_MS_BASE_URL, PRODUCTS_MS_BASE_URL
+from config import TENANT_AUTH_MS_BASE_URL, PRODUCTS_MS_BASE_URL
 
 class TestProductsMicroserviceAsUser(SequentialTaskSet):
     @task
@@ -12,7 +12,7 @@ class TestProductsMicroserviceAsUser(SequentialTaskSet):
             "username": "vincentsuryakim",
             "password": "Zhaolusi123"
         }
-        response = self.client.post(f"{AUTH_MS_BASE_URL}/user/login", json=payload)
+        response = self.client.post(f"{TENANT_AUTH_MS_BASE_URL}/user/login", json=payload)
         self.headers = {
             "Authorization": f"Bearer {response.json()['token']}"
         }
