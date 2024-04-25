@@ -1,7 +1,8 @@
-from locust import HttpUser, SequentialTaskSet, constant, task
+from locust import HttpUser, LoadTestShape, SequentialTaskSet, constant, task
 from uuid import uuid4
 
 from config import AUTH_MS_BASE_URL, PRODUCTS_MS_BASE_URL, WISHLIST_MS_BASE_URL
+from utils.formatCSVShapeData import formatCSVShapeData
 from utils.randomize import generateRandomPhoneNumber
 
 class TestWishlistMicroservice(SequentialTaskSet):
@@ -93,3 +94,21 @@ class WishlistMicroserviceUser(HttpUser):
     host = WISHLIST_MS_BASE_URL
     tasks = [TestWishlistMicroservice]
     wait_time = constant(0.5)
+
+class PoissonShapeWishlist(LoadTestShape):
+    stages = formatCSVShapeData(
+        'shape/poisson_max_500.csv',
+        WishlistMicroserviceUser
+    )
+    def tick(self):
+        run_time = self.get_run_time()
+
+        for stage in self.stages:
+            if run_time < stage["duration"]:
+                try:
+                    tick_data = (stage["users"], stage["spawn_rate"], stage["user_classes"])
+                except:
+                    tick_data = (stage["users"], stage["spawn_rate"])
+                return tick_data
+
+        return None

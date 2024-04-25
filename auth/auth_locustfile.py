@@ -1,7 +1,8 @@
-from locust import HttpUser, SequentialTaskSet, constant, task
+from locust import HttpUser, LoadTestShape, SequentialTaskSet, constant, task
 from uuid import uuid4
 
 from config import AUTH_MS_BASE_URL
+from utils.formatCSVShapeData import formatCSVShapeData
 from utils.randomize import generateRandomPhoneNumber
 
 class TestAuthenticationMicroservice(SequentialTaskSet):
@@ -30,3 +31,21 @@ class AuthenticationMicroserviceUser(HttpUser):
     host = AUTH_MS_BASE_URL
     tasks = [TestAuthenticationMicroservice]
     wait_time = constant(0.5)
+
+class PoissonShapeAuth(LoadTestShape):
+    stages = formatCSVShapeData(
+        'shape/poisson_max_500.csv',
+        AuthenticationMicroserviceUser
+    )
+    def tick(self):
+        run_time = self.get_run_time()
+
+        for stage in self.stages:
+            if run_time < stage["duration"]:
+                try:
+                    tick_data = (stage["users"], stage["spawn_rate"], stage["user_classes"])
+                except:
+                    tick_data = (stage["users"], stage["spawn_rate"])
+                return tick_data
+
+        return None
