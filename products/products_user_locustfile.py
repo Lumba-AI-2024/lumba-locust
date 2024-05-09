@@ -10,7 +10,7 @@ class TestProductsMicroserviceAsUser(SequentialTaskSet):
     def before_start(self):
         # 1. Login
         payload = {
-            "username": "vincentsuryakim",
+            "username": "vincentsuryakim-x",
             "password": "Zhaolusi123"
         }
         response = self.client.post(f"{TENANT_AUTH_MS_BASE_URL}/user/login", json=payload)
