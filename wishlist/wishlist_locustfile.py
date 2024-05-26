@@ -1,4 +1,5 @@
 from locust import HttpUser, LoadTestShape, SequentialTaskSet, constant, task
+from locust.exception import StopUser
 from uuid import uuid4
 
 from config import AUTH_MS_BASE_URL, PRODUCTS_MS_BASE_URL, WISHLIST_MS_BASE_URL
@@ -17,7 +18,9 @@ class TestWishlistMicroservice(SequentialTaskSet):
             "address": "Via Monte Cengio, 19",
             "phone_number": generateRandomPhoneNumber()
         }
-        self.client.post(f"{AUTH_MS_BASE_URL}/user/register", json=payload)
+        response_register = self.client.post(f"{AUTH_MS_BASE_URL}/user/register", json=payload)
+        if response_register.status_code != 201:
+            StopUser()
 
         # 2. Login
         payload = {
@@ -25,15 +28,20 @@ class TestWishlistMicroservice(SequentialTaskSet):
             "password": payload['password']
         }
         response = self.client.post(f"{AUTH_MS_BASE_URL}/user/login", json=payload)
-        self.headers = {
-            "Authorization": f"Bearer {response.json()['token']}"
-        }
+        if response.status_code == 200:
+            self.headers = {
+                "Authorization": f"Bearer {response.json()['token']}"
+            }
+        else:
+            StopUser()
 
         response = self.client.get(f"{PRODUCTS_MS_BASE_URL}/product")
         self.product = response.json()['products'][0]
 
     @task
     def create_wishlist(self):
+        if not hasattr(self, 'headers'):
+            return
         payload = {
             "name": f"Test Wishlist+{str(uuid4())}"
         }
@@ -44,6 +52,8 @@ class TestWishlistMicroservice(SequentialTaskSet):
     
     @task
     def get_all_of_my_wishlist(self):
+        if not hasattr(self, 'headers'):
+            return
         response = self.client.get("/wishlist", headers=self.headers)
         if response.status_code != 200:
             raise Exception("Failed to get all of my wishlist")
@@ -51,6 +61,12 @@ class TestWishlistMicroservice(SequentialTaskSet):
     
     @task
     def add_product_to_wishlist(self):
+        if not hasattr(self, 'headers'):
+            return
+        if not hasattr(self, 'new_wishlist'):
+            return
+        if not hasattr(self, 'product'):
+            return
         payload = {
             "wishlist_id": self.new_wishlist['id'],
             "product_id": self.product['id']
@@ -61,6 +77,10 @@ class TestWishlistMicroservice(SequentialTaskSet):
 
     @task
     def get_wishlist_detail_by_id(self):
+        if not hasattr(self, 'headers'):
+            return
+        if not hasattr(self, 'new_wishlist'):
+            return
         response = self.client.get(f"/wishlist/{self.new_wishlist['id']}", headers=self.headers)
         if response.status_code != 200:
             raise Exception("Failed to get wishlist by ID")
@@ -68,6 +88,10 @@ class TestWishlistMicroservice(SequentialTaskSet):
     
     @task
     def update_wishlist(self):
+        if not hasattr(self, 'headers'):
+            return
+        if not hasattr(self, 'new_wishlist'):
+            return
         payload = {
             "name": f"UPDATED Test Wishlist+{str(uuid4())}"
         }
@@ -77,6 +101,10 @@ class TestWishlistMicroservice(SequentialTaskSet):
 
     @task
     def delete_product_from_wishlist(self):
+        if not hasattr(self, 'headers'):
+            return
+        if not hasattr(self, 'my_wishlist_detail'):
+            return
         payload = {
             "id": self.my_wishlist_detail['id']
         }
@@ -86,6 +114,10 @@ class TestWishlistMicroservice(SequentialTaskSet):
 
     @task
     def delete_wishlist(self):
+        if not hasattr(self, 'headers'):
+            return
+        if not hasattr(self, 'new_wishlist'):
+            return
         response = self.client.delete(f"/wishlist/{self.new_wishlist['id']}", headers=self.headers)
         if response.status_code != 200:
             raise Exception("Failed to delete wishlist")
